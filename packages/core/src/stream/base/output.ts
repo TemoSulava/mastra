@@ -996,6 +996,11 @@ export class MastraModelOutput<OUTPUT = undefined> extends MastraBase {
                 self.#finishCallbackSent = true;
                 await options?.onFinish?.(self.#createSuspendedOnFinishPayload(chunk));
               }
+              self.resolvePromises({
+                usage: self.#getUsageCountWithSuspendedStep(),
+                totalUsage: self.#getTotalUsage(self.#getUsageCountWithSuspendedStep()),
+                finishReason: 'suspended',
+              });
               break;
             case 'abort':
               self.#status = 'canceled';

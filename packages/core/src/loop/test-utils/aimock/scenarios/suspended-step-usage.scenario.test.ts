@@ -77,12 +77,6 @@ const settled = <T>(value: Promise<T> | T) =>
 
 describeForAllEngines('AIMock loop scenario: token usage when a tool call suspends', engine => {
   const getMock = useLoopScenarioAimock();
-  // The #27425 fix only reached the plain loop's output. On durable and evented
-  // engines a suspended run reports no usage for the step that suspended (not on
-  // the stream result, the generate() result, or the tool-call-suspended chunk).
-  // Resumed totals are still correct there. See #27440.
-  const itFailsOnDurable = engine === 'durable' || engine === 'evented' ? it.fails : it;
-
   async function setup(kind: Kind, { withPriorStep = false } = {}) {
     const llm = getMock();
     const toolName = kind === 'suspend' ? 'ask' : 'approve';
@@ -117,7 +111,7 @@ describeForAllEngines('AIMock loop scenario: token usage when a tool call suspen
     kind === 'suspend' ? agent.resumeStream({ answer }, { runId }) : agent.approveToolCall({ runId, toolCallId });
 
   for (const kind of ['suspend', 'approval'] as const) {
-    itFailsOnDurable(`[${kind}] stream() reports the suspended step usage`, async () => {
+    it(`[${kind}] stream() reports the suspended step usage`, async () => {
       const { agent } = await setup(kind);
       const output = await drain(await agent.stream('go'));
 
@@ -126,7 +120,7 @@ describeForAllEngines('AIMock loop scenario: token usage when a tool call suspen
       expect(await output.finishReason).toBe('suspended');
     });
 
-    itFailsOnDurable(`[${kind}] generate() reports the suspended step usage`, async () => {
+    it(`[${kind}] generate() reports the suspended step usage`, async () => {
       const { agent } = await setup(kind);
       const result = await agent.generate('go');
 
@@ -145,7 +139,7 @@ describeForAllEngines('AIMock loop scenario: token usage when a tool call suspen
       expect(tokens(await resumed.totalUsage)).toEqual(add(SUSPENDED, RESUMED));
     });
 
-    itFailsOnDurable(`[${kind}] steps before the suspension count in both suspended and resumed totals`, async () => {
+    it(`[${kind}] steps before the suspension count in both suspended and resumed totals`, async () => {
       const { agent, toolCallId } = await setup(kind, { withPriorStep: true });
       const first: RunHandle = await agent.stream('go');
       const firstOutput = await drain(first);
@@ -157,7 +151,7 @@ describeForAllEngines('AIMock loop scenario: token usage when a tool call suspen
     });
   }
 
-  itFailsOnDurable('keeps the suspended step usage when a resumed tool suspends again', async () => {
+  it('keeps the suspended step usage when a resumed tool suspends again', async () => {
     const { agent, toolCallId } = await setup('suspend');
     const first: RunHandle = await agent.stream('go');
     await drain(first);

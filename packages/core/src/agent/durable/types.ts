@@ -455,6 +455,8 @@ export interface DurableToolCallInput {
   hasSuspendSchema?: boolean;
   /** Exported model_step span data so the TOOL_CALL span nests under the LLM call */
   stepSpanData?: unknown;
+  /** Usage of the model step that produced this call, attached to suspension chunks */
+  stepUsage?: LanguageModelUsage;
 }
 
 /**

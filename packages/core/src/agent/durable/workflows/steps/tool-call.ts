@@ -88,6 +88,7 @@ const durableToolCallInputSchema = z.object({
   stepSpanData: z.any().optional(),
   // First-chunk clock of the step that produced this call, for ending spans on suspend
   completionStartTime: z.coerce.date().optional(),
+  stepUsage: z.any().optional(),
 });
 
 /**
@@ -445,6 +446,10 @@ export function createDurableToolCallStep() {
           logger?.warn?.(`[DurableAgent] Failed to end spans on suspend: ${error}`);
         }
       };
+
+      // A suspended step never reaches `step-finish`, so its model usage rides on the first
+      // suspension chunk of the step (#27440).
+      const takeSuspendedStepUsage = () => typedInput.stepUsage;
 
       // Provider-executed tools are handled entirely by the stream path
       // (tool-call and tool-result chunks in llm-execution.ts), so skip client
@@ -1024,7 +1029,14 @@ export function createDurableToolCallStep() {
               type: 'tool-call-approval' as const,
               runId,
               from: ChunkFrom.AGENT,
-              payload: { toolCallId, toolName, args, resumeSchema: approvalResumeSchema, updatedAt: Date.now() },
+              payload: {
+                toolCallId,
+                toolName,
+                args,
+                resumeSchema: approvalResumeSchema,
+                updatedAt: Date.now(),
+                usage: takeSuspendedStepUsage(),
+              },
             },
             {
               policy: toolPayloadTransform,
@@ -1355,6 +1367,7 @@ export function createDurableToolCallStep() {
                     args: approvalArgs,
                     resumeSchema: approvalResumeSchema,
                     updatedAt: Date.now(),
+                    usage: takeSuspendedStepUsage(),
                   },
                 },
                 {
@@ -1424,6 +1437,7 @@ export function createDurableToolCallStep() {
                     suspendPayload,
                     args,
                     resumeSchema: suspendOptions?.resumeSchema,
+                    usage: takeSuspendedStepUsage(),
                   },
                 },
                 {

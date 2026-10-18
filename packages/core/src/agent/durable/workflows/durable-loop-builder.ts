@@ -552,6 +552,7 @@ export class DurableAgenticLoopBuilder extends AgenticLoopBuilder {
               ...toolCall,
               stepSpanData: llmOutput.stepSpanData,
               completionStartTime: llmOutput.completionStartTime,
+              stepUsage: llmOutput.stepResult?.totalUsage,
             })) as DurableToolCallInput[];
           },
           { id: 'extract-tool-calls' },
