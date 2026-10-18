@@ -1,5 +1,12 @@
 # create-factory
 
+## 0.2.11-alpha.4
+
+### Patch Changes
+
+- Updated dependencies:
+  - mastra@1.34.3-alpha.4
+
 ## 0.2.11-alpha.3
 
 ### Patch Changes
