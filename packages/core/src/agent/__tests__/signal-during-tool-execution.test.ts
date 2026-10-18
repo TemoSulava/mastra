@@ -142,5 +142,35 @@ describe('signal sent while a tool is executing', () => {
     expect(owner!.content.parts).toContainEqual(
       expect.objectContaining({ type: 'data-tool-exit', data: { toolCallId: 'running-call' } }),
     );
+    expect(owner!.content.parts.some(part => part.type === 'text')).toBe(false);
+
+    // Second turn: prompt and memory must place the reply AFTER the reminder
+    const stream2 = await agent.stream('Next', { memory: thread });
+    await stream2.consumeStream();
+
+    expect(prompts).toHaveLength(3);
+    const turn2Prompt = prompts[2] as Array<{ role: string; content: unknown }>;
+    const reminderIndex = turn2Prompt.findIndex(message =>
+      JSON.stringify(message).includes('Reminder arrived while the tool ran'),
+    );
+    const doneIndex = turn2Prompt.findIndex(
+      message =>
+        message.role === 'assistant' &&
+        (Array.isArray(message.content)
+          ? message.content.some((part: any) => part.text === 'done')
+          : typeof message.content === 'string' && message.content.includes('done')),
+    );
+    expect(reminderIndex).toBeGreaterThan(-1);
+    expect(doneIndex).toBeGreaterThan(-1);
+    expect(doneIndex).toBeGreaterThan(reminderIndex);
+
+    const recalled = await memory.recall({ threadId: thread.thread, resourceId: thread.resource });
+    const doneMsgIndex = recalled.messages.findIndex(message =>
+      message.content.parts.some((part: any) => part.type === 'text' && part.text === 'done'),
+    );
+    const reminderMsgIndex = recalled.messages.findIndex(message =>
+      JSON.stringify(message).includes('Reminder arrived while the tool ran'),
+    );
+    expect(doneMsgIndex).toBeGreaterThan(reminderMsgIndex);
   });
 });

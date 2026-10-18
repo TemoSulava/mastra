@@ -1255,6 +1255,7 @@ export function createLLMExecutionStep<TOOLS extends ToolSet = ToolSet, OUTPUT =
   outputWriter,
   mastra,
   rotateResponseMessageId: rotateLoopResponseMessageId,
+  getCurrentResponseMessageId,
   eagerCoordinator,
   eagerToolCallStep,
   runAbortSignal,
@@ -1467,6 +1468,15 @@ export function createLLMExecutionStep<TOOLS extends ToolSet = ToolSet, OUTPUT =
       let currentMessageId = inputData.isTaskCompleteCheckFailed
         ? `${messageIdPassed}-${currentIteration}`
         : inputData.messageId || messageIdPassed;
+
+      const existingMessage = messageList.get.all.db().find(m => m.id === currentMessageId);
+      const isSealed = Boolean(
+        (existingMessage?.content?.metadata?.mastra as Record<string, unknown> | undefined)?.responseBoundary,
+      );
+      const loopCurrentId = getCurrentResponseMessageId?.();
+      if (isSealed) {
+        currentMessageId = loopCurrentId ?? rotateLoopResponseMessageId(currentMessageId);
+      }
 
       // The abort reason from a processor-requested retry goes at the end of the conversation,
       // verbatim, as a reminder signal, so the retry reuses the cached prompt prefix. A system message would

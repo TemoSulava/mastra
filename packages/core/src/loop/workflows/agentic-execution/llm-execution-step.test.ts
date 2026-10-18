@@ -3820,4 +3820,37 @@ describe('per-step modelSettings precedence (call-time < per-model < processor)'
     expect(sentType).toBe('provider');
     expect((setInferenceContext.mock.calls[0]?.[0] as any)?.tools?.[0]?.type).toBe(sentType);
   });
+
+  it('preserves iteration message id when isTaskCompleteCheckFailed is true even if getCurrentResponseMessageId is provided', async () => {
+    const doStream = finishingStream();
+    const llmExecutionStep = baseRun({
+      models: [{ id: 'test-model', maxRetries: 0, model: mockModel(doStream) }],
+      getCurrentResponseMessageId: () => 'msg-0',
+    });
+
+    const input = {
+      ...createIterationInput(),
+      isTaskCompleteCheckFailed: true,
+    };
+
+    const result = await llmExecutionStep.execute(createExecuteParams(input as any));
+
+    expect(result.messageId).toBe('msg-0-1');
+  });
+
+  it('adopts loop response message id when existing message was sealed by a response boundary', async () => {
+    const doStream = finishingStream();
+    messageList.add({ id: 'msg-0', role: 'assistant', content: 'earlier' }, 'response');
+    messageList.markResponseMessageBoundary('msg-0');
+
+    const llmExecutionStep = baseRun({
+      models: [{ id: 'test-model', maxRetries: 0, model: mockModel(doStream) }],
+      getCurrentResponseMessageId: () => 'msg-0-rotated',
+    });
+
+    const input = createIterationInput();
+    const result = await llmExecutionStep.execute(createExecuteParams(input));
+
+    expect(result.messageId).toBe('msg-0-rotated');
+  });
 });

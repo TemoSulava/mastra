@@ -475,6 +475,13 @@ export function createDurableLLMExecutionStep(_options?: DurableLLMExecutionStep
         return currentMessageId;
       };
 
+      const existingMessage = messageList.get.all.db().find(m => m.id === currentMessageId);
+      if (
+        Boolean((existingMessage?.content?.metadata?.mastra as Record<string, unknown> | undefined)?.responseBoundary)
+      ) {
+        currentMessageId = rotateResponseMessageId();
+      }
+
       // Input queued while this step's model request has produced only reasoning cancels
       // the request (not the run), and the step returns so the loop asks again with that input.
       const signalRegistry = getRunRegistryEntry(runId, mastra as Mastra | undefined);

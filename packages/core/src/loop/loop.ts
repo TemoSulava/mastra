@@ -127,6 +127,7 @@ export function loop<Tools extends ToolSet = ToolSet, OUTPUT = undefined>({
     outputProcessors,
     messageId: currentResponseMessageId!,
     rotateResponseMessageId,
+    getCurrentResponseMessageId: () => currentResponseMessageId!,
     agentId,
     requireToolApproval,
     toolCallConcurrency,
